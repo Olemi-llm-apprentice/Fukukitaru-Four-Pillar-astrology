@@ -20,6 +20,10 @@ if st.button('占う'):
     # Concatenate the date and time into a single string
     dob_string = datetime.strftime(dob, '%Y-%m-%d') + ' ' + time_of_birth
     
+    # Create a placeholder for the response
+    placeholder = st.empty()
+    placeholder.text('占い中...')
+    
     # Use the date and time of birth as input to the OpenAI API
     response = openai.ChatCompletion.create(
       model="gpt-3.5-turbo-0613",
@@ -28,7 +32,8 @@ if st.button('占う'):
         {"role": "user", "content": f"以下の生年月日と生まれた時間から、四柱推命で恋愛、勉学、仕事について占ってください\n{dob_string}"},
         ],
       temperature=0.5,
-      max_tokens=500
+      max_tokens=700
     )
         
-    st.write(response.choices[0]['message']['content'])
+    # Update the placeholder with the response
+    placeholder.write(response.choices[0]['message']['content'])
