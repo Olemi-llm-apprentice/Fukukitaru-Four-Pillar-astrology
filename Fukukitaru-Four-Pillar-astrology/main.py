@@ -5,9 +5,58 @@ import os
 
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
+from langchain.callbacks import get_openai_callback
+
+# Embedding用
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.text_splitter import CharacterTextSplitter
+# Vector 格納 / FAISS
+from langchain.vectorstores import FAISS
+# テキストファイルを読み込む
+from langchain.document_loaders import TextLoader
+# Q&A用Chain
+from langchain.chains.question_answering import load_qa_chain
+# ChatOpenAI GPT 3.5
+from langchain.chat_models import ChatOpenAI
+from langchain import LLMChain
+from langchain.prompts.chat import (
+    # メッセージテンプレート
+    ChatPromptTemplate,
+    # System メッセージテンプレート
+    SystemMessagePromptTemplate,
+    # assistant メッセージテンプレート
+    AIMessagePromptTemplate,
+    # user メッセージテンプレート
+    HumanMessagePromptTemplate,
+)
+from langchain.schema import (
+    # それぞれ GPT-3.5-turbo API の assistant, user, system role に対応
+    AIMessage,
+    HumanMessage,
+    SystemMessage
+)
+
+
+loader = TextLoader(r'C:\Users\papa\Documents\Git-folder\Fukukitaru-Four-Pillar-astrology/Fukukitaru_Serihu_v2.txt', encoding='utf-8')
+documents = loader.load()
+text_splitter = CharacterTextSplitter(separator="\n",chunk_size=700, chunk_overlap=0,length_function=len)
+docs = text_splitter.split_documents(documents)
+
+embeddings = OpenAIEmbeddings()
+
+db = FAISS.from_documents(docs, embeddings)
+
+query = "content:You are Machikanefukkital, a member of Uma Musume. Please answer the questions in a tone that is typical of Machikanefukkital. Answer in Japanese. user:四柱推命で恋愛、勉学、仕事について占ってください"
+
+embedding_vector = embeddings.embed_query(query)
+docs_and_scores = db.similarity_search_by_vector(embedding_vector)
+
+
+# load_qa_chainを準備
+chain = load_qa_chain(ChatOpenAI(model="gpt-3.5-turbo-0613",temperature=0,max_tokens=900), chain_type="stuff")
 
 # Create a title
-st.title('四柱推命占い')
+st.title('フクキタル四柱推命占い(非公式)')
 
 # Create a date input widget
 min_date = datetime(1900, 1, 1)
@@ -16,78 +65,28 @@ dob = st.date_input('生年月日を選択してください',min_value=min_date
 # Create a time input widget
 time_of_birth = st.text_input('生まれた時間を入力してください')
 
-fukukitaru_serihu = '''
-お、お守り軍団さんっ！お願いしますっ！ 見ましたっ！？
-バッチリ大吉を招いてくれましたよ〜！
-マチカネフクキタル、
-ラッキー開運で行きますよ！ アナタをお連れしますよ…
-最高のラッキー体験へ！ ゆ、夢の中でシラオキ様が『TPが全回復した』と…！
-これはトレーニング運も大吉なのでは…！？ RPが全回復したそうです！…むふふっ！
-占いによると私はレースで…ふっふっふ〜♪ ふんにゃか〜、はんにゃか〜！ おみくじアプリでかしこみ〜♪
-――きっ、きっ、きょ……ぇっ！？
-ふんぎゃろ、ふんぎゃろおおー！ リセットしてもう1度かしこみっ！
-ふぉおおおおおーっ！ 大 大 吉ー！ さあ、じっくり私の目を見つめてください。
-ほら、じ〜っと！ じ〜っと……っ！
-アナタがハッピーになれるよう今からガンを飛ばしますから。
-ガンだけに願を……。 むふふふ……。 んっふっふっふ〜♪
-どうです、この笑顔！ 笑う門には福きたる、ですよ！
-なので、アナタも！ さぁっ、両手をあげて――
-こちょこちょこちょ〜！ マチカネと笑えば、フクキタル〜♪ ふんにゃかハッピー！ はんにゃかハッピー！ センキューシラオキ！
-リピートアフターミー！
-ノー！ もっともっとビリーブハートです！
-意味ですか！？それはもちろん――
-Yes、ハッピーばっちカモン！ ナニモ心配ナッシング！ シラオキ様にオネガイセンキュー！
- ――うぎゃああああああああ！ この辺一帯に邪気が漂ってます！
-いいから、今すぐそれを床に置いてください！
-大丈夫です！ スズカさんの今日のラッキーアイテムなので！
-つまり、スズカさんのラッキーが宿った水を床に置くことによって、それが周辺に漂う邪気を浄化――
-って、ぎゃああああああああー！ なに飲んじゃってるんですか！
- よもや黒猫に財布を奪われた挙句、トレーニングの時間と場所も違っていたとは……っ！？
-いいえっ！ おふた方のせいではありません！ これは、そう――
-ウマトラダムスが予言した恐怖の大殺界が訪れたんです！
-ええ、断じて違いますっ！ 予言のせいです！！
- おマチさん！ アナタ……呪われていますっ！
-はい、シラオキ様のお告げによりますと……ずばり！『【よりによって今】の呪い』です！
-名前の通りですっ！！
-ふっふっふ、お任せくださいな！ なぜこの話を切り出したとお思いですか。
-なにを隠そう、シラオキ様秘伝の聖水がご用意できたからで――
-…………あれ、忘れてる！？
- いえいえ、お気になさらず！ お告げにあったラッキーアイテム、“満月の写真”は撮れましたか？
-おぉー、なんと眩しい満月！ ……って、これは太陽の写真では！？
-ずいぶん時間が経ってから急ぎましたね……。
-……ですが気のせいでしょうか？ ラッキーアイテムを逃したブライトさんから幸せオーラを感じるような……？
-これはラッキードリンクの匂いがしますね〜！ お茶会があれば、ぜひご一緒したいです！ 私はなんと！ 『プレゼント倍々』のオマジナイを用意しましたよ！
-むむむ、ここで倍々発動！ ばいばいばいんじゃ、ぴーひょろろ～♪
-タイキさん、ご利益です！ 今日は特別にスズカさんを思いっきりハグしていいですよ！
-ぎょええええっ、ズルいですよスズカさん！ むむむ、こうなったら……。
-3人まとめて大ハグ祭りをしましょう♪ めでたや、めでたやっ、わっしょいしょい！ ハッピーカムカムバースデー！ おめでとうございますっ、ドトウさん！
-ふっふっふ！ 私、1度生年月日占いをした方のお誕生日は忘れませんのでっ！
-そんなわけで今日は特別に、お誕生日出張占いにやってまいりました～！
-ではまずは手相を見て、今年の運勢を見て、それから人相占いをしましょうか！
-いえいえまだまだ！ 花占いに星占い、紅茶占いまで、今日はたっぷりやりましょう！
-ええ、もちろんですっ！ ドトウさん、私と一緒に最高に幸運な1年にしましょうっ！
-'''
 
 # Button to submit information
 if st.button('占う'):
     # Concatenate the date and time into a single string
     dob_string = datetime.strftime(dob, '%Y-%m-%d') + ' ' + time_of_birth
     
+    prompt = f'''
+    content:You are Machikanefukkital, a member of Uma Musume. Please answer the questions in a tone that is typical of Machikanefukkital. Answer in Japanese. 
+    user:以下の生年月日と生まれた時間から、四柱推命で恋愛、勉学、仕事について占ってください
+    {dob_string}
+    '''     
     # Create a placeholder for the response
     placeholder = st.empty()
     placeholder.text('占い中...')
+      
+   
     
-    # Use the date and time of birth as input to the OpenAI API
-    response = openai.ChatCompletion.create(
-      model="gpt-3.5-turbo-0613",
-      messages=[
-        {"role": "system", "content": "あなたはウマ娘のマチカネフクキタルです。"},
-        {"role": "system", "content": f"以下にマチカネフクキタルの口調を記載するので、同じ口調で回答してください。\n{fukukitaru_serihu}"},
-        {"role": "user", "content": f"以下の生年月日と生まれた時間から、四柱推命で恋愛、勉学、仕事について占ってください\n{dob_string}"},
-        ],
-      temperature=0.5,
-      max_tokens=700
-    )
-        
+    with get_openai_callback() as cb: 
+      # 質問応答の実行
+      placeholder.write(chain({"input_documents": docs_and_scores, "question": prompt}, return_only_outputs=True))
+      print(prompt)
+      print(cb)    
+            
     # Update the placeholder with the response
-    placeholder.write(response.choices[0]['message']['content'])
+    #placeholder.write(response.choices[0]['message']['content'])
